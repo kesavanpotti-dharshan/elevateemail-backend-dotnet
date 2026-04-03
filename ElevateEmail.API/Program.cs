@@ -1,3 +1,5 @@
+using ElevateEmail.API.Middleware;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -7,14 +9,24 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// [1] Global exception handler middleware should be registered at the top of the pipeline to catch exceptions from all subsequent middlewares and request processing.
+app.UseMiddleware<GlobalExceptionMiddleware>();
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "ElevateEmail.API v1");
+        options.RoutePrefix = string.Empty; // Set Swagger UI at the app's root
+        options.DocumentTitle = "ElevateEmail API Documentation";
+    });
 }
 
 app.UseHttpsRedirection();
+
+// CORS — must come before controllers
+app.UseCors("ReactFrontend");
 
 var summaries = new[]
 {
@@ -35,6 +47,9 @@ app.MapGet("/weatherforecast", () =>
 })
 .WithName("GetWeatherForecast")
 .WithOpenApi();
+
+// Map Controllers
+app.MapControllers();
 
 app.Run();
 
